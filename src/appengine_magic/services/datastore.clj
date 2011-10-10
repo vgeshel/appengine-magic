@@ -210,11 +210,12 @@
 
 (defn get-entity-object-helper [entity-record kind before-save]
   (let [entity-record (before-save entity-record)
-        key-object (get-key-object entity-record)
-        clj-properties (get-clj-properties entity-record)
         entity-meta (meta entity-record)
+        parent (:parent entity-meta)
+        key-object (get-key-object entity-record parent)
+        clj-properties (get-clj-properties entity-record)
         entity (cond key-object (Entity. key-object)
-                     (contains? entity-meta :parent) (Entity. kind (:parent entity-meta))
+                     (contains? entity-meta :parent) (Entity. kind parent)
                      :else (Entity. kind))]
     (doseq [[property-kw value] entity-record]
       (.setProperty entity (name property-kw) (if (contains? clj-properties property-kw)
