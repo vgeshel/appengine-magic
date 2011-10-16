@@ -9,7 +9,8 @@
             FetchOptions$Builder
             Query Query$FilterOperator Query$SortDirection]
            ;; types
-           [com.google.appengine.api.datastore Blob ShortBlob Text Link]
+           [com.google.appengine.api.datastore Text Link Category
+            Email GeoPt Blob ShortBlob]
            com.google.appengine.api.blobstore.BlobKey))
 
 
@@ -394,6 +395,17 @@
         key (coerce-to-key-seq target)]
     (.delete (get-datastore-service) key)))
 
+(def storage-types
+  {:text #(Text. (str %))
+   :category #(Category. (str %))
+   :email #(Email. (str %))
+   :geo-point (fn [x]
+                (if (and (map? x) (:lat x) (:long x))
+                  (GeoPt. (float (:lat x)) (float (:long x)))
+                  (throw (IllegalArgumentException. (format "invalid value for geo-point, must be a map with :lat and :long keys: %s" x)))))
+   :link #(Link. (str %))
+   ;; TODO blobs, IMHandles, ratings, etc
+   })
 
 (defmacro defentity [name properties &
                      {:keys [kind before-save after-load]
@@ -406,6 +418,24 @@
         key-property-name (if (clj13?)
                               (first (filter #(contains? (meta %) :key) properties))
                               (first (filter #(= (:tag (meta %)) :key) properties)))
+        before-save (reduce
+                     (fn [chain prop]
+                       (let [kw (keyword (str prop))
+                             t (:storage-type (meta prop))
+                             tf (when t
+                                  (get storage-types t))
+                             f (when tf
+                                 `(fn [rec#]
+                                    (let [v# (get rec# ~kw)]
+                                      (if (not (nil? v#))
+                                        (assoc rec# ~kw (~tf v#))
+                                        rec#))))]
+                         (if f
+                           (cons f chain)
+                           chain)))
+                     (list (or before-save identity))
+                     properties)
+        before-save (cons 'comp before-save)
         ;; TODO: Clojure 1.3: Remove unnecessary call to str.
         key-property (if key-property-name (keyword (str key-property-name)) nil)
         ;; XXX: The keyword and str composition below works

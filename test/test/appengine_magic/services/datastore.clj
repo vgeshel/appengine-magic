@@ -2,14 +2,22 @@
   (:use clojure.test)
   (:require [appengine-magic.services.datastore :as ds]
             [appengine-magic.testing :as ae-testing])
-  (:import com.google.appengine.api.datastore.KeyFactory))
+  (:import [com.google.appengine.api.datastore
+            KeyFactory
+            Text
+            Link
+            Category
+            Email
+            GeoPt
+            Blob
+            ShortBlob]))
 
 
 (use-fixtures :each (ae-testing/local-services :all))
 
 
-(ds/defentity Author [^:key name])
-(ds/defentity Article [^:key title author body comment-count])
+(ds/defentity Author [^{:key true} name])
+(ds/defentity Article [^:key title author ^{:storage-type :text} body comment-count])
 (ds/defentity Comment [^:key subject article author body])
 (ds/defentity Note [author body])
 (ds/defentity Parent [name child-counter])
@@ -52,6 +60,12 @@
     ;; just count
     (is (= 2 (ds/query :kind Author :count-only? true)))))
 
+
+(deftest storage-types
+  (let [alice (Author. "Alice")
+        article (Article. "Article 1" alice "The fine article." 0)
+        e (ds/get-entity-object article)]
+    (is (instance? Text (.getProperty e "body")))))
 
 (deftest transactions
   (let [alice (Author. "Alice")
