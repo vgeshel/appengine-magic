@@ -364,10 +364,11 @@
         (let [key-object (make-key-from-value key-value-or-values parent)
               entity (.get (get-datastore-service) key-object)
               raw-properties (into {} (.getProperties entity))
-              entity-record (run-after-load (record entity-record-type))]
+              entity-record (record entity-record-type)]
           (with-meta
-            (merge entity-record (entity->properties raw-properties
-                                                     (get-clj-properties entity-record)))
+            (run-after-load
+             (merge entity-record (entity->properties raw-properties
+                                                      (get-clj-properties entity-record))))
             {:key (.getKey entity)})))))
 
 
@@ -396,14 +397,17 @@
     (.delete (get-datastore-service) key)))
 
 (def storage-types
-  {:text #(Text. (str %))
-   :category #(Category. (str %))
-   :email #(Email. (str %))
-   :geo-point (fn [x]
-                (if (and (map? x) (:lat x) (:long x))
-                  (GeoPt. (float (:lat x)) (float (:long x)))
-                  (throw (IllegalArgumentException. (format "invalid value for geo-point, must be a map with :lat and :long keys: %s" x)))))
-   :link #(Link. (str %))
+  {:text {:enc #(Text. (str %)) :dec #(.getValue %)}
+   :category {:enc #(Category. (str %)) :dec #(.getCategory %)}
+   :email {:enc #(Email. (str %)) :dec #(.getEmail %)}
+   :geo-point {:enc (fn [x]
+                      (if (and (map? x) (:latitude x) (:longitude x))
+                        (GeoPt. (float (:latitude x)) (float (:longitude x)))
+                        (throw (IllegalArgumentException. (format "invalid value for geo-point, must be a map with :lat and :long keys: %s" x)))))
+               :dec (fn [^GeoPt p]
+                      {:latitude (.getLatitude p)
+                       :longitude (.getLongitude p)})}
+   :link {:enc #(Link. (str %)) :dec #(.getValue %)}
    ;; TODO blobs, IMHandles, ratings, etc
    })
 
@@ -418,24 +422,32 @@
         key-property-name (if (clj13?)
                               (first (filter #(contains? (meta %) :key) properties))
                               (first (filter #(= (:tag (meta %)) :key) properties)))
-        before-save (reduce
-                     (fn [chain prop]
-                       (let [kw (keyword (str prop))
-                             t (:storage-type (meta prop))
-                             tf (when t
-                                  (get storage-types t))
-                             f (when tf
-                                 `(fn [rec#]
-                                    (let [v# (get rec# ~kw)]
-                                      (if (not (nil? v#))
-                                        (assoc rec# ~kw (~tf v#))
-                                        rec#))))]
-                         (if f
-                           (cons f chain)
-                           chain)))
-                     (list (or before-save identity))
-                     properties)
-        before-save (cons 'comp before-save)
+        ;; build up a composition of start and the encoders or
+        ;; decoders specified by the storage-types of the props
+        ;; start will be the right-most element of the list, i.e., the
+        ;; first fn to be applied
+        get-coders (fn [enc-or-dec start]
+                     (reduce
+                      (fn [chain prop]
+                        (let [kw (keyword (str prop))
+                              t (:storage-type (meta prop))
+                              tf (when t
+                                   (enc-or-dec (get storage-types t)))
+                              f (when tf
+                                  `(fn [rec#]
+                                     (let [v# (get rec# ~kw)]
+                                       (if (not (nil? v#))
+                                         (assoc rec# ~kw (~tf v#))
+                                         rec#))))]
+                          (if f
+                            (cons f chain)
+                            chain)))
+                      (list start)
+                      properties))
+        ;; encoding: first apply the user's before-save, then the encoders
+        before-save (cons 'comp (get-coders :enc before-save))
+        ;; decoding: apply the decoders, then the user's after-load
+        after-load (cons 'comp (reverse (get-coders :dec after-load)))
         ;; TODO: Clojure 1.3: Remove unnecessary call to str.
         key-property (if key-property-name (keyword (str key-property-name)) nil)
         ;; XXX: The keyword and str composition below works

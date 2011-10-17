@@ -64,8 +64,11 @@
 (deftest storage-types
   (let [alice (Author. "Alice")
         article (Article. "Article 1" alice "The fine article." 0)
-        e (ds/get-entity-object article)]
-    (is (instance? Text (.getProperty e "body")))))
+        e (ds/get-entity-object article)
+        _ (ds/save! article)
+        r (ds/retrieve Article (ds/get-key-object article))]
+    (is (instance? Text (.getProperty e "body")))
+    (is (string? (:body r)))))
 
 (deftest transactions
   (let [alice (Author. "Alice")
