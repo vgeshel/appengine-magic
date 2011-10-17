@@ -23,6 +23,8 @@
 (ds/defentity Parent [name child-counter])
 (ds/defentity Child [name parent])
 
+(ds/defentity Route [^:key id ^{:storage-type :geo-point} points ^{:storage-type :link} map-url])
+
 (ds/defentity O1 [x]
   :before-save (fn [entity] (assoc entity :x (inc (:x entity)))))
 (ds/defentity O2 [x]
@@ -68,7 +70,20 @@
         _ (ds/save! article)
         r (ds/retrieve Article (ds/get-key-object article))]
     (is (instance? Text (.getProperty e "body")))
-    (is (string? (:body r)))))
+    (is (string? (:body r))))
+  (let [points [{:latitude 0.0 :longitude 0.0}
+                {:latitude 1.0 :longitude 1.0}]
+        id "x"
+        map-url "xxx"
+        route (Route. id points map-url)
+        e (ds/get-entity-object route)
+        _ (ds/save! route)
+        r (ds/retrieve Route (ds/get-key-object route))]
+    (is (= 2 (count (.getProperty e "points"))))
+    (is (= map-url (:map-url r)))
+    (is (= points (:points r)))
+    (is (instance? GeoPt (first (.getProperty e "points"))))
+    (is (instance? Link (.getProperty e "map-url")))))
 
 (deftest transactions
   (let [alice (Author. "Alice")

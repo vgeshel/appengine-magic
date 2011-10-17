@@ -411,6 +411,20 @@
    ;; TODO blobs, IMHandles, ratings, etc
    })
 
+(defn- coder [storage-type enc-or-dec]
+  (when-let [st (get storage-types storage-type)]
+    (let [tf (get st enc-or-dec)]
+      `(fn [val#]
+         (cond
+          (nil? val#) nil
+          (or (vector? val#)
+              (list? val#))
+          (into (empty val#) (map ~tf val#))
+          (coll? val#)
+          (throw (IllegalArgumentException. (format "unsupported value in encoder: %s"
+                                                    (type val#))))
+          :else (~tf val#))))))
+
 (defmacro defentity [name properties &
                      {:keys [kind before-save after-load]
                       :or {kind (unqualified-name name)
@@ -432,7 +446,7 @@
                         (let [kw (keyword (str prop))
                               t (:storage-type (meta prop))
                               tf (when t
-                                   (enc-or-dec (get storage-types t)))
+                                   (coder t enc-or-dec))
                               f (when tf
                                   `(fn [rec#]
                                      (let [v# (get rec# ~kw)]
