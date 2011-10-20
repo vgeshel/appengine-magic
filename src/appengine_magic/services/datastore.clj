@@ -397,7 +397,11 @@
     (.delete (get-datastore-service) key)))
 
 (def storage-types
-  {:text {:enc #(Text. (str %)) :dec #(.getValue %)}
+  {:text {:enc #(Text. (str %)) :dec #(cond
+                                       (nil? %) nil
+                                       (string? %) %
+                                       (instance? Text %) (.getValue %)
+                                       :else (throw (IllegalArgumentException. (format "unexpected value for a text field: %s" %))))}
    :category {:enc #(Category. (str %)) :dec #(.getCategory %)}
    :email {:enc #(Email. (str %)) :dec #(.getEmail %)}
    :geo-point {:enc (fn [x]
