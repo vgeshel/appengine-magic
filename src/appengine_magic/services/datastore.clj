@@ -12,6 +12,11 @@
            ;; types
            [com.google.appengine.api.datastore Text Link Category
             Email GeoPt Blob ShortBlob]
+           [java.util ConcurrentModificationException]
+           ;; exceptions
+           [com.google.appengine.api.datastore
+            DatastoreTimeoutException
+            DatastoreFailureException]
            com.google.appengine.api.blobstore.BlobKey))
 
 
@@ -561,6 +566,22 @@
        (catch Throwable err#
          (do (.rollback *current-transaction*)
              (throw err#))))))
+
+(defmacro with-retries
+  "try the body up to max times, retrying when one of [ConcurrentModificationException DatastoreFailureException DatastoreTimeoutException] is encountered. body should be idempotent"
+  [max & body]
+  (let [a (gensym)
+        f-name (gensym)
+        handler (fn [c]
+                  `(catch ~c e#
+                     (if (> ~a 0)
+                       (~f-name (dec ~a))
+                       (throw e#))))
+        f `(fn ~f-name [~a]
+             (try
+               ~@body
+               ~@(map handler [ConcurrentModificationException DatastoreFailureException DatastoreTimeoutException])))]
+    `(~f ~(dec max))))
 
 (defn query-helper [kind ancestor filters sorts keys-only?
                     count-only? in-transaction?
