@@ -18,12 +18,12 @@
                  [taglibs/standard "1.1.2"] ; repackaged-appengine-jakarta-standard-1.1.2.jar
                  [commons-el "1.0"]
                  ;; main App Engine libraries
-                 [com.google.appengine/appengine-api-1.0-sdk "1.5.4"]
-                 [com.google.appengine/appengine-api-labs "1.5.4"]
-                 [com.google.appengine/appengine-api-stubs "1.5.4"]
-                 [com.google.appengine/appengine-local-runtime "1.5.4"]
-                 [com.google.appengine/appengine-local-runtime-shared "1.5.4"]
-                 [com.google.appengine/appengine-testing "1.5.4"]
-                 [com.google.appengine/appengine-tools-api "1.5.4"]]
+                 [com.google.appengine/appengine-api-1.0-sdk "1.5.5"]
+                 [com.google.appengine/appengine-api-labs "1.5.5"]
+                 [com.google.appengine/appengine-api-stubs "1.5.5"]
+                 [com.google.appengine/appengine-local-runtime "1.5.5"]
+                 [com.google.appengine/appengine-local-runtime-shared "1.5.5"]
+                 [com.google.appengine/appengine-testing "1.5.5"]
+                 [com.google.appengine/appengine-tools-api "1.5.5"]]
   :dev-dependencies [[org.clojure/clojure "1.2.1"]
                      [swank-clojure "1.3.2"]])
