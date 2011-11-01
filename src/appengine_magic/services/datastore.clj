@@ -8,7 +8,8 @@
             Entity
             FetchOptions$Builder
             Query Query$FilterOperator Query$SortDirection
-            TransactionOptions TransactionOptions$Builder]
+            TransactionOptions TransactionOptions$Builder
+            DatastoreAttributes DatastoreAttributes$DatastoreType]
            ;; types
            [com.google.appengine.api.datastore Text Link Category
             Email GeoPt Blob ShortBlob]
@@ -548,7 +549,14 @@
 ;;; wherever possible, but the *current-transaction* value is still used for
 ;;; query construction.
 (defmacro with-transaction [& body]
-  `(binding [*current-transaction* (.beginTransaction (get-datastore-service))]
+  `(binding [*current-transaction* (.beginTransaction (get-datastore-service)
+                                                      (TransactionOptions$Builder/withXG
+                                                       (=
+                                                        DatastoreAttributes$DatastoreType/HIGH_REPLICATION
+                                                        
+                                                        (.. (get-datastore-service)
+                                                            (getDatastoreAttributes)
+                                                            (getDatastoreType)))))]
      (try
        (let [body-result# (do ~@body)]
          (.commit *current-transaction*)
@@ -558,7 +566,8 @@
              (throw err#))))))
 
 (defmacro with-cross-group-transaction [& body]
-  `(binding [*current-transaction* (.beginTransaction (get-datastore-service) (TransactionOptions$Builder/withXG true))]
+  `(binding [*current-transaction* (.beginTransaction (get-datastore-service)
+                                                      (TransactionOptions$Builder/withXG true))]
      (try
        (let [body-result# (do ~@body)]
          (.commit *current-transaction*)
