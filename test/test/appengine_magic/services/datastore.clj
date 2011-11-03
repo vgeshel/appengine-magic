@@ -1,7 +1,8 @@
 (ns test.appengine-magic.services.datastore
   (:use clojure.test)
   (:require [appengine-magic.services.datastore :as ds]
-            [appengine-magic.testing :as ae-testing])
+            [appengine-magic.testing :as ae-testing]
+            [appengine-magic.services.datastore.storage-types :as st])
   (:import [com.google.appengine.api.datastore
             KeyFactory
             Text
@@ -16,14 +17,14 @@
 (use-fixtures :each (ae-testing/local-services :all))
 
 
-(ds/defentity Author [^{:key true} name])
-(ds/defentity Article [^:key title author ^{:storage-type :text} body comment-count])
+(ds/defentity Author [^:key  name])
+(ds/defentity Article [^:key title author ^{:storage-type st/text} body comment-count])
 (ds/defentity Comment [^:key subject article author body])
 (ds/defentity Note [author body])
 (ds/defentity Parent [name child-counter])
 (ds/defentity Child [name parent])
 
-(ds/defentity Route [^:key id ^{:storage-type :geo-point} points ^{:storage-type :link} map-url])
+(ds/defentity Route [^:key id ^{:storage-type st/geo-point} points ^{:storage-type st/link} map-url])
 
 (ds/defentity O1 [x]
   :before-save (fn [entity] (assoc entity :x (inc (:x entity)))))

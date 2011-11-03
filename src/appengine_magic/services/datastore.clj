@@ -403,38 +403,20 @@
         key (coerce-to-key-seq target)]
     (.delete (get-datastore-service) key)))
 
-(def storage-types
-  {:text {:enc #(Text. (str %)) :dec #(cond
-                                       (nil? %) nil
-                                       (string? %) %
-                                       (instance? Text %) (.getValue %)
-                                       :else (throw (IllegalArgumentException. (format "unexpected value for a text field: %s" %))))}
-   :category {:enc #(Category. (str %)) :dec #(.getCategory %)}
-   :email {:enc #(Email. (str %)) :dec #(.getEmail %)}
-   :geo-point {:enc (fn [x]
-                      (if (and (map? x) (:latitude x) (:longitude x))
-                        (GeoPt. (float (:latitude x)) (float (:longitude x)))
-                        (throw (IllegalArgumentException. (format "invalid value for geo-point, must be a map with :lat and :long keys: %s" x)))))
-               :dec (fn [^GeoPt p]
-                      {:latitude (.getLatitude p)
-                       :longitude (.getLongitude p)})}
-   :link {:enc #(Link. (str %)) :dec #(.getValue %)}
-   ;; TODO blobs, IMHandles, ratings, etc
-   })
-
-(defn- coder [storage-type enc-or-dec]
-  (when-let [st (get storage-types storage-type)]
-    (let [tf (get st enc-or-dec)]
-      `(fn [val#]
-         (cond
-          (nil? val#) nil
-          (or (vector? val#)
-              (list? val#))
-          (into (empty val#) (map ~tf val#))
-          (coll? val#)
-          (throw (IllegalArgumentException. (format "unsupported value in encoder: %s"
-                                                    (type val#))))
-          :else (~tf val#))))))
+(defn coder [storage-type enc-or-dec]
+  (if-let [tf (get storage-type enc-or-dec)]
+    (fn [val]
+      (cond
+       (nil? val) nil
+       (or (vector? val)
+           (list? val))
+       (into (empty val) (map tf val))
+       (coll? val)
+       (throw (IllegalArgumentException. (format "unsupported value in encoder: %s"
+                                                 (type val))))
+       :else (tf val)))
+    (throw (IllegalArgumentException. (format "storage type %s does dot define %s"
+                                              storage-type enc-or-dec)))))
 
 (defmacro defentity [name properties &
                      {:keys [kind before-save after-load]
@@ -456,14 +438,14 @@
                       (fn [chain prop]
                         (let [kw (keyword (str prop))
                               t (:storage-type (meta prop))
-                              tf (when t
-                                   (coder t enc-or-dec))
-                              f (when tf
+                              f (when t
                                   `(fn [rec#]
-                                     (let [v# (get rec# ~kw)]
-                                       (if (not (nil? v#))
-                                         (assoc rec# ~kw (~tf v#))
-                                         rec#))))]
+                                     (if-let [tf# (coder ~t ~enc-or-dec)]
+                                       (let [v# (get rec# ~kw)]
+                                         (if (not (nil? v#))
+                                           (assoc rec# ~kw (tf# v#))
+                                           rec#))
+                                       rec#)))]
                           (if f
                             (cons f chain)
                             chain)))
