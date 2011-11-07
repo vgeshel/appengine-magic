@@ -70,20 +70,20 @@
 
 (defn as-blob-key [x]
   (if (instance? BlobKey x)
-      x
-      (BlobKey. x)))
+    x
+    (BlobKey. x)))
 
 
 (defn as-text [x]
   (if (instance? Text x)
-      x
-      (Text. x)))
+    x
+    (Text. x)))
 
 
 (defn as-link [x]
   (if (instance? Link x)
-      x
-      (Link. x)))
+    x
+    (Link. x)))
 
 
 
@@ -155,8 +155,8 @@
   (let [s (str sym)
         last-slash (.lastIndexOf s "/")]
     (.substring (str s) (inc (if (neg? last-slash)
-                                 (.lastIndexOf s ".")
-                                 last-slash)))))
+                               (.lastIndexOf s ".")
+                               last-slash)))))
 
 
 (defn- coerce-key-value-type [key-value]
@@ -179,13 +179,13 @@
                           (let [jhs (java.util.HashSet.)]
                             (doseq [v s] (.add jhs v))
                             jhs))]
-   (cond (instance? clojure.lang.APersistentMap v) (to-java-hashmap v) ; broken in GAE 1.3.7
-         (instance? clojure.lang.APersistentSet v) (to-java-hashset v) ; broken in GAE 1.3.7
-         (extends? EntityProtocol (class v)) (get-key-object v)
-	 (or (instance? clojure.lang.PersistentList v)
-	     (instance? clojure.lang.PersistentVector v))
-	 (map #(if (extends? EntityProtocol (class %)) (get-key-object %) %) v) ; ReferenceList support
-         :else v)))
+    (cond (instance? clojure.lang.APersistentMap v) (to-java-hashmap v) ; broken in GAE 1.3.7
+          (instance? clojure.lang.APersistentSet v) (to-java-hashset v) ; broken in GAE 1.3.7
+          (extends? EntityProtocol (class v)) (get-key-object v)
+          (or (instance? clojure.lang.PersistentList v)
+              (instance? clojure.lang.PersistentVector v))
+          (map #(if (extends? EntityProtocol (class %)) (get-key-object %) %) v) ; ReferenceList support
+          :else v)))
 
 
 (defn- coerce-to-key-seq [any-seq]
@@ -207,10 +207,10 @@
      ;; key property exists
      (not (nil? key-property-value))
      (if parent
-         (if (instance? Key parent)
-             (KeyFactory/createKey parent kind key-property-value)
-             (KeyFactory/createKey (get-key-object parent) kind key-property-value))
-         (KeyFactory/createKey kind key-property-value))
+       (if (instance? Key parent)
+         (KeyFactory/createKey parent kind key-property-value)
+         (KeyFactory/createKey (get-key-object parent) kind key-property-value))
+       (KeyFactory/createKey kind key-property-value))
      ;; something's wrong
      :else (throw (RuntimeException.
                    "entity has no valid :key metadata, and has no fields marked :key")))))
@@ -227,8 +227,8 @@
                      :else (Entity. kind))]
     (doseq [[property-kw value] entity-record]
       (.setProperty entity (name property-kw) (if (contains? clj-properties property-kw)
-                                                  (Text. (prn-str value))
-                                                  (coerce-clojure-type value))))
+                                                (Text. (prn-str value))
+                                                (coerce-clojure-type value))))
     entity))
 
 
@@ -264,7 +264,7 @@
         ancestor-key-object (cond (instance? Key ancestor) ancestor
                                   (extends? EntityProtocol
                                             (class ancestor)) (get-key-object ancestor)
-                                  :else nil)
+                                            :else nil)
         query-object (cond (and (nil? kind) (nil? ancestor-key-object)) (Query.)
                            (nil? kind) (Query. ancestor-key-object)
                            (nil? ancestor-key-object) (Query. kind)
@@ -284,8 +284,8 @@
               (keyword? filter-property-kw))
          (let [filter-property (name filter-property-kw)
                filter-value (if (extends? EntityProtocol (class filter-value))
-                                (get-key-object filter-value)
-                                filter-value)]
+                              (get-key-object filter-value)
+                              filter-value)]
            (.addFilter query-object filter-property filter-operator filter-value))
          ;; no filter definition
          (and (nil? filter-operator) (nil? filter-property-kw) (nil? filter-value))
@@ -322,10 +322,10 @@
 (defn- entity->properties [raw-properties clj-properties]
   (reduce (fn [m [k v]]
             (let [k (keyword k)]
-             (assoc m k (if (contains? clj-properties k)
-                            (binding [*read-eval* false]
-                              (read-string (.getValue v)))
-                            (coerce-java-type v)))))
+              (assoc m k (if (contains? clj-properties k)
+                           (binding [*read-eval* false]
+                             (read-string (.getValue v)))
+                           (coerce-java-type v)))))
           {}
           raw-properties))
 
@@ -352,31 +352,31 @@
                                (KeyFactory/createKey kind
                                                      (coerce-key-value-type key-value))))]
     (if (sequential? key-value-or-values)
-        ;; handles sequences of values
-        (let [key-objects (map (fn [kv] (if (sequential? kv)
-                                            (make-key-from-value (first kv) (second kv))
-                                            (make-key-from-value kv nil)))
-                               key-value-or-values)
-              entities (.get (get-datastore-service) key-objects)
-              model-record (record entity-record-type)]
-          (map #(let [v (.getValue %)]
-                  (with-meta
-                    (run-after-load
-                     (merge model-record
-                            (entity->properties (.getProperties v)
-                                                (get-clj-properties model-record))))
-                    {:key (.getKey v)}))
-               entities))
-        ;; handles singleton values
-        (let [key-object (make-key-from-value key-value-or-values parent)
-              entity (.get (get-datastore-service) key-object)
-              raw-properties (into {} (.getProperties entity))
-              entity-record (record entity-record-type)]
-          (with-meta
-            (run-after-load
-             (merge entity-record (entity->properties raw-properties
-                                                      (get-clj-properties entity-record))))
-            {:key (.getKey entity)})))))
+      ;; handles sequences of values
+      (let [key-objects (map (fn [kv] (if (sequential? kv)
+                                        (make-key-from-value (first kv) (second kv))
+                                        (make-key-from-value kv nil)))
+                             key-value-or-values)
+            entities (.get (get-datastore-service) key-objects)
+            model-record (record entity-record-type)]
+        (map #(let [v (.getValue %)]
+                (with-meta
+                  (run-after-load
+                   (merge model-record
+                          (entity->properties (.getProperties v)
+                                              (get-clj-properties model-record))))
+                  {:key (.getKey v)}))
+             entities))
+      ;; handles singleton values
+      (let [key-object (make-key-from-value key-value-or-values parent)
+            entity (.get (get-datastore-service) key-object)
+            raw-properties (into {} (.getProperties entity))
+            entity-record (record entity-record-type)]
+        (with-meta
+          (run-after-load
+           (merge entity-record (entity->properties raw-properties
+                                                    (get-clj-properties entity-record))))
+          {:key (.getKey entity)})))))
 
 
 (defn retrieve [entity-record-type key-value-or-values &
@@ -388,8 +388,8 @@
     (catch EntityNotFoundException _ nil)
     ;; XXX: Clojure 1.3.x:
     (catch Exception ex (if (isa? (class (.getCause ex)) EntityNotFoundException)
-                            nil
-                            (throw ex)))))
+                          nil
+                          (throw ex)))))
 
 
 (defn exists? [entity-record-type key-value-or-values &
@@ -427,8 +427,8 @@
   (let [clj13? (fn [] (and (= 1 (:major *clojure-version*))
                            (= 3 (:minor *clojure-version*))))
         key-property-name (if (clj13?)
-                              (first (filter #(contains? (meta %) :key) properties))
-                              (first (filter #(= (:tag (meta %)) :key) properties)))
+                            (first (filter #(contains? (meta %) :key) properties))
+                            (first (filter #(= (:tag (meta %)) :key) properties)))
         ;; build up a composition of start and the encoders or
         ;; decoders specified by the storage-types of the props
         ;; start will be the right-most element of the list, i.e., the
@@ -463,10 +463,10 @@
         ;; TODO: This bug is fixed in Clojure 1.3 after alpha4 came out (see
         ;; http://dev.clojure.org/jira/browse/CLJ-693).
         clj-properties (if (clj13?)
-                           (set (map (comp keyword str)
-                                     (filter #(contains? (meta %) :clj) properties)))
-                           (set (map (comp keyword str)
-                                     (filter #(= (:tag (meta %)) :clj) properties))))]
+                         (set (map (comp keyword str)
+                                   (filter #(contains? (meta %) :clj) properties)))
+                         (set (map (comp keyword str)
+                                   (filter #(= (:tag (meta %)) :clj) properties))))]
     `(defrecord ~name ~properties
        EntityProtocol
        (get-clj-properties [this#]
@@ -522,41 +522,35 @@
     `(let [entity# ~props-expr
            parent# ~parent]
        (if (nil? parent#)
-           entity#
-           (with-meta entity# {:key (get-key-object entity# parent#)
-                               :parent (get-key-object parent#)})))))
+         entity#
+         (with-meta entity# {:key (get-key-object entity# parent#)
+                             :parent (get-key-object parent#)})))))
 
 
 ;;; Note that the code relies on the API's implicit transaction tracking
 ;;; wherever possible, but the *current-transaction* value is still used for
 ;;; query construction.
 (defmacro with-transaction [& body]
-  `(binding [*current-transaction* (.beginTransaction (get-datastore-service)
-                                                      (TransactionOptions$Builder/withXG
-                                                       (=
-                                                        DatastoreAttributes$DatastoreType/HIGH_REPLICATION
-                                                        
-                                                        (.. (get-datastore-service)
-                                                            (getDatastoreAttributes)
-                                                            (getDatastoreType)))))]
-     (try
-       (let [body-result# (do ~@body)]
-         (.commit *current-transaction*)
-         body-result#)
-       (catch Throwable err#
-         (do (.rollback *current-transaction*)
-             (throw err#))))))
-
-(defmacro with-cross-group-transaction [& body]
-  `(binding [*current-transaction* (.beginTransaction (get-datastore-service)
-                                                      (TransactionOptions$Builder/withXG true))]
-     (try
-       (let [body-result# (do ~@body)]
-         (.commit *current-transaction*)
-         body-result#)
-       (catch Throwable err#
-         (do (.rollback *current-transaction*)
-             (throw err#))))))
+  `(let [[commit?# tx#] (if (and *current-transaction* (.isActive *current-transaction*))
+                          [false *current-transaction*]
+                          [true (.beginTransaction (get-datastore-service)
+                                                   (TransactionOptions$Builder/withXG
+                                                    (=
+                                                     DatastoreAttributes$DatastoreType/HIGH_REPLICATION
+                                                     
+                                                     (.. (get-datastore-service)
+                                                         (getDatastoreAttributes)
+                                                         (getDatastoreType)))))])]
+     (binding [*current-transaction* tx#]
+       (try
+         (let [body-result# (do ~@body)]
+           (when commit?#
+             (.commit *current-transaction*))
+           body-result#)
+         (catch Throwable err#
+           (do (when commit?#
+                 (.rollback *current-transaction*))
+               (throw err#)))))))
 
 (defmacro with-retries
   "try the body up to max times, retrying when one of [ConcurrentModificationException DatastoreFailureException DatastoreTimeoutException] is encountered. body should be idempotent"
@@ -583,20 +577,20 @@
   (let [query-object (make-query-object kind ancestor filters sorts keys-only?)
         fetch-options-object (make-fetch-options-object limit offset prefetch-size chunk-size)
         prepared-query (if (and in-transaction? *current-transaction*)
-                           (.prepare (get-datastore-service) *current-transaction* query-object)
-                           (.prepare (get-datastore-service) query-object))
+                         (.prepare (get-datastore-service) *current-transaction* query-object)
+                         (.prepare (get-datastore-service) query-object))
         result-type (if (and (instance? Class kind) (extends? EntityProtocol kind))
-                        kind
-                        entity-record-type)
+                      kind
+                      entity-record-type)
         result-count (.countEntities prepared-query fetch-options-object)]
     (cond count-only? result-count
           (zero? result-count) (list)
           :else (let [results (seq (.asIterable prepared-query fetch-options-object))
                       model-record (if result-type
-                                       ;; we know this type; good
-                                       (record result-type)
-                                       ;; unknown type; just use a basic EntityProtocol
-                                       (EntityBase.))]
+                                     ;; we know this type; good
+                                     (record result-type)
+                                     ;; unknown type; just use a basic EntityProtocol
+                                     (EntityBase.))]
                   (map #(with-meta
                           (run-after-load
                            (merge model-record
@@ -629,28 +623,28 @@
         sort (if (sequential? sort) sort (vector sort))]
     `(let [filter# (map (fn [[sym# prop-kw# prop-val#]]
                           (QueryFilter. (condp = sym#
-                                            := Query$FilterOperator/EQUAL
-                                            :> Query$FilterOperator/GREATER_THAN
-                                            :>= Query$FilterOperator/GREATER_THAN_OR_EQUAL
-                                            :in Query$FilterOperator/IN
-                                            :< Query$FilterOperator/LESS_THAN
-                                            :<= Query$FilterOperator/LESS_THAN_OR_EQUAL
-                                            :! Query$FilterOperator/NOT_EQUAL
-                                            :!= Query$FilterOperator/NOT_EQUAL
-                                            :<> Query$FilterOperator/NOT_EQUAL)
+                                          := Query$FilterOperator/EQUAL
+                                          :> Query$FilterOperator/GREATER_THAN
+                                          :>= Query$FilterOperator/GREATER_THAN_OR_EQUAL
+                                          :in Query$FilterOperator/IN
+                                          :< Query$FilterOperator/LESS_THAN
+                                          :<= Query$FilterOperator/LESS_THAN_OR_EQUAL
+                                          :! Query$FilterOperator/NOT_EQUAL
+                                          :!= Query$FilterOperator/NOT_EQUAL
+                                          :<> Query$FilterOperator/NOT_EQUAL)
                                         prop-kw# prop-val#))
                         ~filter)
            sort# (map (fn [sort-spec#]
                         (if (sequential? sort-spec#)
-                            (let [[sort-property# sort-dir-spec#] sort-spec#
-                                  sort-dir# (condp = sort-dir-spec#
-                                                :asc Query$SortDirection/ASCENDING
-                                                :ascending Query$SortDirection/ASCENDING
-                                                :dsc Query$SortDirection/DESCENDING
-                                                :desc Query$SortDirection/DESCENDING
-                                                :descending Query$SortDirection/DESCENDING)]
-                              (QuerySort. sort-property# sort-dir#))
-                            (QuerySort. sort-spec# Query$SortDirection/ASCENDING)))
+                          (let [[sort-property# sort-dir-spec#] sort-spec#
+                                sort-dir# (condp = sort-dir-spec#
+                                            :asc Query$SortDirection/ASCENDING
+                                            :ascending Query$SortDirection/ASCENDING
+                                            :dsc Query$SortDirection/DESCENDING
+                                            :desc Query$SortDirection/DESCENDING
+                                            :descending Query$SortDirection/DESCENDING)]
+                            (QuerySort. sort-property# sort-dir#))
+                          (QuerySort. sort-spec# Query$SortDirection/ASCENDING)))
                       ~sort)]
        (query-helper ~kind ~ancestor filter# sort# ~keys-only?
                      ~count-only? ~in-transaction?
@@ -663,10 +657,10 @@
 (defn- get-key-str-helper [key]
   (let [str-key (str key)]
     (if (empty? str-key)
-        (throw (IllegalArgumentException.
-                (str "get-key-str must be called on an object with a datastore key, "
-                     "i.e., an object already persisted with save!")))
-        str-key)))
+      (throw (IllegalArgumentException.
+              (str "get-key-str must be called on an object with a datastore key, "
+                   "i.e., an object already persisted with save!")))
+      str-key)))
 
 
 (defn key-str
