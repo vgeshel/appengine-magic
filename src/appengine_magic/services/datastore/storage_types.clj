@@ -27,4 +27,8 @@
 (def link {:enc #(Link. (str %))
            :dec #(.getValue %)})
 
+;;; convert a stored string to/from keyword
+(def keyword {:enc name
+              :dec keyword})
+
 
