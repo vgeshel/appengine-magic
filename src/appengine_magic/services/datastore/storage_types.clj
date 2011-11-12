@@ -28,7 +28,7 @@
            :dec #(.getValue %)})
 
 ;;; convert a stored string to/from keyword
-(def keyword {:enc name
-              :dec keyword})
+(def keyword {:enc clojure.core/name
+              :dec clojure.core/keyword})
 
 
