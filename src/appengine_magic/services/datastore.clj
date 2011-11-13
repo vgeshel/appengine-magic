@@ -415,7 +415,7 @@
        (throw (IllegalArgumentException. (format "unsupported value in encoder: %s"
                                                  (type val))))
        :else (tf val)))
-    (throw (IllegalArgumentException. (format "storage type %s does dot define %s"
+    (throw (IllegalArgumentException. (format "storage type %s does not define %s"
                                               storage-type enc-or-dec)))))
 
 (defmacro defentity [name properties &

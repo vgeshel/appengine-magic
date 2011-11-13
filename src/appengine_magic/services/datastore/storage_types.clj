@@ -1,4 +1,5 @@
 (ns appengine-magic.services.datastore.storage-types
+  (:refer-clojure :exclude [keyword])
   (:import 
    [com.google.appengine.api.datastore Text Link Category
     Email GeoPt Blob ShortBlob]))
